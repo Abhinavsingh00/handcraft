@@ -6,19 +6,54 @@ This directory contains documentation for each page in the Pawfectly Handmade ap
 
 ## Available Page Documentation
 
-| Page | Path | Status | Last Updated |
-|------|------|--------|--------------|
-| [About Page](./about-page.md) | `/about` | ✅ Complete | Mar 18, 2026 |
-| [Shipping Page](./shipping-page.md) | `/shipping` | ✅ Complete | Mar 18, 2026 |
-| [Returns Page](./returns-page.md) | `/returns` | ✅ Complete | Mar 18, 2026 |
-| Contact Page | `/contact` | ✅ Complete | - |
-| FAQ Page | `/faq` | ✅ Complete | - |
-| Privacy Policy | `/privacy` | ✅ Complete | - |
-| Terms of Service | `/terms` | ✅ Complete | - |
-| Shop Page | `/shop` | ✅ Complete | - |
-| Home Page | `/` | ✅ Complete | - |
-| Cart Page | `/cart` | ✅ Complete | - |
-| Checkout | `/checkout` | ✅ Complete | - |
+| Page | Path | Status | Last Updated | Type |
+|------|------|--------|--------------|------|
+| [About Page](./about-page.md) | `/about` | ✅ Complete | Mar 18, 2026 | Client |
+| [Contact Page](./contact-page.md) | `/contact` | ✅ Complete | Mar 18, 2026 | Client |
+| [Shop Page](./shop-page.md) | `/shop` | ✅ Complete | Mar 18, 2026 | Client |
+| [FAQ Page](./faq-page.md) | `/faq` | ✅ Complete | Mar 18, 2026 | Client |
+| [Shipping Page](./shipping-page.md) | `/shipping` | ✅ Complete | Mar 18, 2026 | Server |
+| [Returns Page](./returns-page.md) | `/returns` | ✅ Complete | Mar 18, 2026 | Server |
+| [Privacy Policy](./privacy-page.md) | `/privacy` | ✅ Complete | Mar 18, 2026 | Server |
+| [Terms of Service](./terms-page.md) | `/terms` | ✅ Complete | Mar 18, 2026 | Server |
+| Home Page | `/` | ✅ Complete | - | - |
+| Cart Page | `/cart` | ✅ Complete | - | - |
+| Checkout | `/checkout` | ✅ Complete | - | - |
+| Product Detail | `/product/[slug]` | ✅ Complete | - | - |
+| Checkout Success | `/checkout/success` | ✅ Complete | - | - |
+
+---
+
+## Documentation Quick Links
+
+### Marketing Pages
+- [About](./about-page.md) - Brand story, team, values
+- [Contact](./contact-page.md) - Form, info, location
+- [Shop](./shop-page.md) - Product catalog with filters
+
+### Information Pages
+- [FAQ](./faq-page.md) - 18 FAQs with search & categories
+- [Shipping](./shipping-page.md) - Shipping options & policies
+- [Returns](./returns-page.md) - Return policy & process
+
+### Legal Pages
+- [Privacy](./privacy-page.md) - Data collection & usage
+- [Terms](./terms-page.md) - Terms of service
+
+---
+
+## Page Types
+
+### Client Components
+Require `'use client'` directive:
+- Interactive forms (Contact)
+- State management (Shop filters, FAQ accordion)
+- User interactions (all)
+
+### Server Components
+Default for static content:
+- Legal pages (Privacy, Terms)
+- Content pages (Shipping, Returns after animation fix)
 
 ---
 
@@ -77,6 +112,8 @@ When adding new pages, use this template:
 - `AlertCircle` - Warnings, important info
 - `Mail` - Email, contact
 - `PawPrint` - Brand element, dogs
+- `Shield` - Security, privacy
+- `RefreshCw` - Returns, exchanges
 
 ### Common Color Gradients
 - `from-primary/10 via-background to-secondary/10` - Standard hero
