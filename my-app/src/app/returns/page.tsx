@@ -29,29 +29,35 @@ export default function ReturnsPage() {
     <main className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary/10 via-background to-primary/10"></div>
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-20 left-10 w-32 h-32 text-secondary transform -rotate-12">
-            <RefreshCw strokeWidth={1} fill="currentColor" />
-          </div>
-          <div className="absolute bottom-20 right-10 w-24 h-24 text-primary transform rotate-12">
-            <Heart strokeWidth={1} fill="currentColor" />
-          </div>
+        {/* Hero background image */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/images/returns/returns-hero.jpg"
+            alt="Happy dog with returns"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background"></div>
         </div>
-        <div className="container mx-auto px-4 py-20 md:py-24 relative">
+
+        <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary/10 text-secondary rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary/10 backdrop-blur-sm text-secondary rounded-full mb-6 animate-fade-in">
               <Heart className="w-4 h-4" />
               <span className="text-sm font-medium">Happiness Guarantee</span>
             </div>
-            <h1 className="font-display text-5xl md:text-6xl font-bold mb-6">
+            <h1 className="font-display text-5xl md:text-6xl font-bold mb-6 animate-slide-up">
               Return <span className="text-secondary">Policy</span>
             </h1>
-            <p className="font-body text-lg text-foreground/70">
+            <p className="font-body text-lg text-foreground/80 animate-fade-in">
               30-day happiness guarantee on all handmade products. Your pup's satisfaction is our priority!
             </p>
           </div>
         </div>
+
+        {/* Wave divider */}
+        <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" className="fill-muted/30"/>
+        </svg>
       </section>
 
       {/* Happiness Guarantee Banner */}
@@ -316,6 +322,33 @@ export default function ReturnsPage() {
           </div>
         </div>
       </section>
+
+      {/* Custom animations */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.8s ease-out forwards;
+        }
+
+        .animate-slide-up {
+          animation: slide-up 0.6s ease-out forwards;
+        }
+      `}</style>
     </main>
   )
 }
