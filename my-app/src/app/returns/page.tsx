@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { RefreshCw, Smile, Heart, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 
