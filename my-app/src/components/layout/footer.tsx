@@ -1,5 +1,4 @@
 // Footer component for Pawfectly Handmade
-
 'use client'
 
 import Link from 'next/link'
@@ -104,6 +103,7 @@ export function Footer() {
                 placeholder="Your email"
                 className="flex-1 px-3 py-2 rounded-md bg-background text-foreground text-sm placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label="Email address"
+                suppressHydrationWarning
               />
               <button
                 type="submit"
