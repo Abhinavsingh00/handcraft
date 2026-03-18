@@ -8,9 +8,9 @@ This directory contains documentation for each page in the Pawfectly Handmade ap
 
 | Page | Path | Status | Last Updated |
 |------|------|--------|--------------|
+| [About Page](./about-page.md) | `/about` | ✅ Complete | Mar 18, 2026 |
 | [Shipping Page](./shipping-page.md) | `/shipping` | ✅ Complete | Mar 18, 2026 |
 | [Returns Page](./returns-page.md) | `/returns` | ✅ Complete | Mar 18, 2026 |
-| About Page | `/about` | ✅ Complete | - |
 | Contact Page | `/contact` | ✅ Complete | - |
 | FAQ Page | `/faq` | ✅ Complete | - |
 | Privacy Policy | `/privacy` | ✅ Complete | - |
