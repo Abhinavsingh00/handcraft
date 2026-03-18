@@ -9,7 +9,7 @@ export default function ShippingPage() {
         {/* Hero background image */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/images/shipping/shipping-hero.jpg"
+            src="/images/shipping/shipping-hero.svg"
             alt="Shipping and delivery"
             className="w-full h-full object-cover"
           />

@@ -32,7 +32,7 @@ export default function ReturnsPage() {
         {/* Hero background image */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/images/returns/returns-hero.jpg"
+            src="/images/returns/returns-hero.svg"
             alt="Happy dog with returns"
             className="w-full h-full object-cover"
           />
