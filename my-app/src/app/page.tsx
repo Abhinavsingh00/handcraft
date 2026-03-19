@@ -8,6 +8,8 @@ import { getFeaturedProducts, getNewProducts } from '@/app/actions/products'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
   const featuredProducts = await getFeaturedProducts()
   const newProducts = await getNewProducts()
