@@ -111,10 +111,7 @@ export function ProductCard({ product, priority }: ProductCardProps) {
 
           {/* Add to Cart Button */}
           <Button
-            className={cn(
-              'w-full transition-all duration-300 hover:bg-primary/90',
-              isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 md:opacity-0'
-            )}
+            className="w-full transition-all duration-300 hover:bg-primary/90"
             onClick={handleAddToCart}
             disabled={added}
           >
