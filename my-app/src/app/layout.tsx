@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Amatic_SC, Cabin } from "next/font/google";
+import { Patrick_Hand, Cabin } from "next/font/google";
 import "./globals.css";
 import { CartProviderWrapper } from "@/components/cart/cart-provider-wrapper";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 
 // Custom fonts for Pawfectly Handmade brand
-const amaticSC = Amatic_SC({
+const patrickHand = Patrick_Hand({
   weight: ["400", "700"],
   variable: "--font-display",
   subsets: ["latin"],
@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${amaticSC.variable} ${cabin.variable} antialiased font-body bg-background text-foreground`}
+        className={`${patrickHand.variable} ${cabin.variable} antialiased font-body bg-background text-foreground`}
       >
         <CartProviderWrapper>
           <Navbar />
