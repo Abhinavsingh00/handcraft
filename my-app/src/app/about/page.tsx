@@ -299,16 +299,16 @@ export default function AboutPage() {
             ].map((member, index) => (
               <div
                 key={index}
-                className={`group ${member.rotate} hover:rotate-0 transition-transform duration-300`}
+                className={`relative group ${member.rotate} hover:rotate-0 transition-transform duration-300`}
               >
                 {/* Polaroid card */}
-                <div className="bg-white rounded-lg shadow-lg p-4 pb-8">
+                <div className="bg-white rounded-lg shadow-lg p-4 pb-8 transition-shadow duration-300 group-hover:shadow-xl">
                   {/* Photo area */}
-                  <div className="aspect-square rounded-md mb-4 overflow-hidden">
+                  <div className="aspect-square rounded-md mb-4 overflow-hidden bg-muted">
                     <img
                       src={member.image}
                       alt={member.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
 
