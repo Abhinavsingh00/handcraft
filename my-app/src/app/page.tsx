@@ -155,6 +155,7 @@ export default async function HomePage() {
               placeholder="Your email"
               className="flex-1 px-4 py-3 rounded-md bg-white text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-foreground"
               aria-label="Email address"
+              suppressHydrationWarning
             />
             <Button
               type="submit"
