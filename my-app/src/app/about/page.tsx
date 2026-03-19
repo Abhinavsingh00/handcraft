@@ -328,8 +328,8 @@ export default function AboutPage() {
                   </div>
                 </div>
 
-                {/* Tape decoration */}
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-24 h-8 bg-background/60 backdrop-blur-sm rotate-2 shadow-sm"></div>
+                {/* Tape decoration - hidden */}
+                {/* <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-24 h-8 bg-background/60 backdrop-blur-sm rotate-2 shadow-sm"></div> */}
               </div>
             ))}
           </div>
