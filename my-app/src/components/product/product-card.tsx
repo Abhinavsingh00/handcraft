@@ -88,7 +88,7 @@ export function ProductCard({ product, priority }: ProductCardProps) {
 
         {/* Content */}
         <div className="p-4">
-          <h3 className="font-display text-xl font-semibold text-foreground mb-1 line-clamp-1 group-hover:text-primary transition-colors">
+          <h3 className="text-2xl font-bold text-foreground mb-1 line-clamp-1 group-hover:text-primary transition-colors font-display">
             {product.name}
           </h3>
 
@@ -112,7 +112,7 @@ export function ProductCard({ product, priority }: ProductCardProps) {
           {/* Add to Cart Button */}
           <Button
             className={cn(
-              'w-full transition-all duration-300',
+              'w-full transition-all duration-300 hover:bg-primary/90',
               isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 md:opacity-0'
             )}
             onClick={handleAddToCart}
