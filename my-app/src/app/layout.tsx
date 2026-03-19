@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/footer";
 
 // Custom fonts for Pawfectly Handmade brand
 const patrickHand = Patrick_Hand({
-  weight: ["400", "700"],
+  weight: ["400"],
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
