@@ -4,6 +4,7 @@ import "./globals.css";
 import { CartProviderWrapper } from "@/components/cart/cart-provider-wrapper";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { AuthProvider } from "@/contexts/auth-context";
 
 // Custom fonts for Pawfectly Handmade brand
 const patrickHand = Patrick_Hand({
@@ -36,13 +37,15 @@ export default function RootLayout({
       <body
         className={`${patrickHand.variable} ${cabin.variable} antialiased font-body bg-background text-foreground`}
       >
-        <CartProviderWrapper>
-          <Navbar />
-          <main className="min-h-screen pt-16">
-            {children}
-          </main>
-          <Footer />
-        </CartProviderWrapper>
+        <AuthProvider>
+          <CartProviderWrapper>
+            <Navbar />
+            <main className="min-h-screen pt-16">
+              {children}
+            </main>
+            <Footer />
+          </CartProviderWrapper>
+        </AuthProvider>
       </body>
     </html>
   );

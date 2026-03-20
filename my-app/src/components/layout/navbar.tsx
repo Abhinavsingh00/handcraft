@@ -4,14 +4,17 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { ShoppingBag, Menu, X, PawPrint } from 'lucide-react'
+import { ShoppingBag, Menu, X, PawPrint, User, LogOut } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
+import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const { items, isLoaded } = useCart()
+  const { user, profile, signOut, loading } = useAuth()
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   useEffect(() => {
@@ -19,6 +22,12 @@ export function Navbar() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const handleSignOut = async () => {
+    await signOut()
+    setIsUserMenuOpen(false)
+    window.location.href = '/'
+  }
 
   const navLinks = [
     { href: '/', label: 'Home' },
@@ -60,7 +69,7 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Cart & Mobile Menu */}
+          {/* Cart, Auth & Mobile Menu */}
           <div className="flex items-center gap-4">
             <Link
               href="/cart"
@@ -74,6 +83,73 @@ export function Navbar() {
                 </span>
               )}
             </Link>
+
+            {/* Auth Buttons - Desktop */}
+            <div className="hidden md:block">
+              {loading ? (
+                <div className="w-8 h-8 bg-muted animate-pulse rounded-full" />
+              ) : user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2 p-1 pr-3 hover:bg-muted rounded-full transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium">
+                      {profile?.full_name || user.email?.split('@')[0]}
+                    </span>
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-card border rounded-lg shadow-lg py-2">
+                      <Link
+                        href="/account"
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-muted transition-colors"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <User className="w-4 h-4" />
+                        <span>My Account</span>
+                      </Link>
+                      {profile?.role === 'admin' && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 px-4 py-2 hover:bg-muted transition-colors"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <User className="w-4 h-4" />
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      )}
+                      <hr className="my-2" />
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-2 w-full px-4 py-2 hover:bg-muted transition-colors text-left"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    className="px-4 py-2 text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
 
             <button
               className="md:hidden p-2 hover:bg-muted rounded-full transition-colors"
@@ -99,6 +175,60 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            
+            {/* Mobile Auth Buttons */}
+            <hr className="my-4" />
+            {loading ? (
+              <div className="flex items-center gap-2 px-2">
+                <div className="w-6 h-6 bg-muted animate-pulse rounded-full" />
+                <div className="w-24 h-4 bg-muted animate-pulse rounded" />
+              </div>
+            ) : user ? (
+              <>
+                <Link
+                  href="/account"
+                  className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  My Account
+                </Link>
+                {profile?.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    handleSignOut()
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="block w-full text-left py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>

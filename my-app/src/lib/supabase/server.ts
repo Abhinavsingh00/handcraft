@@ -1,4 +1,4 @@
-import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
+import { createClient as createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 /**
@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
  * Uses cookies for authentication (not used in Phase 2.1 but ready for future auth)
  * Note: Returns null if env vars are missing (Server Actions will fall back to mock)
  */
-export async function createServerClient() {
+export async function createClient() {
   // Check if we're in a browser environment (shouldn't happen, but defensive)
   if (typeof window !== 'undefined') {
     return null
@@ -24,7 +24,7 @@ export async function createServerClient() {
   try {
     const cookieStore = await cookies()
 
-    return createSupabaseServerClient(url, key, {
+    return createServerClient(url, key, {
       cookies: {
         getAll() {
           return cookieStore.getAll()
