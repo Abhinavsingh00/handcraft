@@ -3,7 +3,7 @@
 **Project:** Pawfectly Handmade E-commerce
 **Date:** March 19, 2025
 **Author:** Claude (glm-4.6)
-**Status:** Approved
+**Status:** Draft - Revision 1
 
 ---
 
@@ -89,7 +89,7 @@ CREATE TABLE orders (
 CREATE TABLE order_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   order_id UUID REFERENCES orders(id) ON DELETE CASCADE NOT NULL,
-  product_id TEXT REFERENCES products(id) ON DELETE SET NULL,
+  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   price_at_purchase DECIMAL(10,2) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -99,10 +99,11 @@ CREATE TABLE order_items (
 CREATE TABLE reviews (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) NOT NULL,
-  product_id TEXT REFERENCES products(id) ON DELETE CASCADE NOT NULL,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE NOT NULL,
   order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   comment TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, product_id)
@@ -112,9 +113,26 @@ CREATE TABLE reviews (
 CREATE TABLE wishlist (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  product_id TEXT REFERENCES products(id) ON DELETE CASCADE NOT NULL,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, product_id)
+);
+
+-- Addresses table
+CREATE TABLE addresses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  is_default BOOLEAN DEFAULT false,
+  full_name TEXT NOT NULL,
+  address_line1 TEXT NOT NULL,
+  address_line2 TEXT,
+  city TEXT NOT NULL,
+  state TEXT NOT NULL,
+  postal_code TEXT NOT NULL,
+  country TEXT NOT NULL DEFAULT 'United States',
+  phone TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
@@ -122,10 +140,219 @@ CREATE TABLE wishlist (
 
 ```sql
 -- Add tracking fields to products
-ALTER TABLE products ADD COLUMN created_by UUID REFERENCES profiles(id);
-ALTER TABLE products ADD COLUMN updated_by UUID REFERENCES profiles(id);
-ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0;
-ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES profiles(id);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES profiles(id);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER DEFAULT 5;
+```
+
+### Database Indexes (Performance)
+
+```sql
+-- Orders indexes
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_created_at ON orders(created_at DESC);
+CREATE INDEX idx_orders_return_status ON orders(return_status);
+
+-- Order items indexes
+CREATE INDEX idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX idx_order_items_product_id ON order_items(product_id);
+
+-- Reviews indexes
+CREATE INDEX idx_reviews_user_id ON reviews(user_id);
+CREATE INDEX idx_reviews_product_id ON reviews(product_id);
+CREATE INDEX idx_reviews_status ON reviews(status);
+
+-- Wishlist indexes
+CREATE INDEX idx_wishlist_user_id ON wishlist(user_id);
+CREATE INDEX idx_wishlist_product_id ON wishlist(product_id);
+
+-- Addresses indexes
+CREATE INDEX idx_addresses_user_id ON addresses(user_id);
+CREATE INDEX idx_addresses_is_default ON addresses(is_default);
+
+-- Profiles indexes
+CREATE INDEX idx_profiles_role ON profiles(role);
+```
+
+### Row Level Security (RLS) Policies
+
+```sql
+-- Enable RLS on all tables
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wishlist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
+
+-- Profiles policies
+CREATE POLICY "Users can view their own profile" ON profiles
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Admins can view all profiles" ON profiles
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Users can insert their own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Orders policies
+CREATE POLICY "Users can view their own orders" ON orders
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all orders" ON orders
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins can update orders" ON orders
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Order items policies (inherited through orders)
+CREATE POLICY "Users can view their own order items" ON order_items
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM orders
+      WHERE orders.id = order_items.order_id
+      AND orders.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Admins can view all order items" ON order_items
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Reviews policies
+CREATE POLICY "Users can view approved reviews" ON reviews
+  FOR SELECT USING (status = 'approved');
+
+CREATE POLICY "Users can view their own reviews" ON reviews
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own reviews" ON reviews
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own reviews" ON reviews
+  FOR UPDATE USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all reviews" ON reviews
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins can update review status" ON reviews
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Wishlist policies
+CREATE POLICY "Users can view their own wishlist" ON wishlist
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert to their own wishlist" ON wishlist
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete from their own wishlist" ON wishlist
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all wishlist items" ON wishlist
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Addresses policies
+CREATE POLICY "Users can view their own addresses" ON addresses
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own addresses" ON addresses
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own addresses" ON addresses
+  FOR UPDATE USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own addresses" ON addresses
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all addresses" ON addresses
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+```
+
+### Database Migration Strategy
+
+**Migration File:** `supabase/migrations/20250319_add_auth_and_orders.sql`
+
+**Steps:**
+1. Create all new tables
+2. Add columns to existing products table
+3. Create all indexes
+4. Enable and configure RLS policies
+5. Create triggers for updated_at timestamps
+
+**Trigger for updated_at:**
+```sql
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Triggers for updated_at
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_addresses_updated_at BEFORE UPDATE ON addresses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+```
+
+**Rollback Strategy:**
+- Keep migration file in version control
+- Test migrations in staging environment first
+- Create backup before running migrations in production
+- Document rollback steps for each migration
+
+**Rollback Commands:**
+```sql
+-- Rollback script (save as 20250319_add_auth_and_orders_rollback.sql)
+DROP TRIGGER IF EXISTS update_addresses_updated_at ON addresses;
+DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
+DROP FUNCTION IF EXISTS update_updated_at_column();
+
+DROP TABLE IF EXISTS addresses CASCADE;
+DROP TABLE IF EXISTS wishlist CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+
+ALTER TABLE products DROP COLUMN IF EXISTS low_stock_threshold;
+ALTER TABLE products DROP COLUMN IF EXISTS stock;
+ALTER TABLE products DROP COLUMN IF EXISTS updated_by;
+ALTER TABLE products DROP COLUMN IF EXISTS created_by;
 ```
 
 ---
@@ -484,30 +711,523 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 ```typescript
 // hooks/useRealtimeOrders.ts
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase/client'
 
 export function useRealtimeOrders() {
   const [newOrderCount, setNewOrderCount] = useState(0)
+  const [isConnected, setIsConnected] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const retryCountRef = useRef(0)
+  const maxRetries = 3
 
   useEffect(() => {
-    const channel = supabase
-      .channel('public:orders')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
-        setNewOrderCount(prev => prev + 1)
-        // Play notification sound
-        // Show toast notification
-      })
-      .subscribe()
+    let channel: RealtimeChannel | null = null
+    let mounted = true
+
+    const setupSubscription = async () => {
+      try {
+        channel = supabase
+          .channel('public:orders')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+            if (mounted) {
+              setNewOrderCount(prev => prev + 1)
+              // Play notification sound
+              // Show toast notification
+            }
+          })
+          .subscribe((status) => {
+            if (!mounted) return
+            if (status === 'SUBSCRIBED') {
+              setIsConnected(true)
+              setError(null)
+              retryCountRef.current = 0
+            } else if (status === 'SUBSCRIPTION_ERROR') {
+              console.error('Subscription failed')
+              setIsConnected(false)
+              setError('Connection failed')
+              // Retry logic
+              if (retryCountRef.current < maxRetries) {
+                retryCountRef.current++
+                setTimeout(() => {
+                  if (mounted) setupSubscription()
+                }, 2000 * retryCountRef.current)
+              }
+            }
+          })
+      } catch (err) {
+        console.error('Failed to setup subscription:', err)
+        if (mounted) {
+          setError('Failed to connect to real-time updates')
+          setIsConnected(false)
+        }
+      }
+    }
+
+    setupSubscription()
 
     return () => {
-      channel.unsubscribe()
+      mounted = false
+      if (channel) {
+        channel.unsubscribe()
+      }
     }
   }, [])
 
-  return { newOrderCount }
+  return { newOrderCount, isConnected, error }
 }
 ```
+
+---
+
+## Error Handling Strategy
+
+### Authentication Errors
+
+```typescript
+// lib/errors/auth-errors.ts
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public userMessage: string
+  ) {
+    super(message)
+    this.name = 'AuthError'
+  }
+}
+
+export const AUTH_ERRORS = {
+  INVALID_CREDENTIALS: new AuthError(
+    'Invalid credentials',
+    'INVALID_CREDENTIALS',
+    'Invalid email or password. Please try again.'
+  ),
+  WEAK_PASSWORD: new AuthError(
+    'Weak password',
+    'WEAK_PASSWORD',
+    'Password must be at least 8 characters with a mix of letters, numbers, and symbols.'
+  ),
+  EMAIL_ALREADY_EXISTS: new AuthError(
+    'Email already exists',
+    'EMAIL_ALREADY_EXISTS',
+    'An account with this email already exists. Please login instead.'
+  ),
+  SESSION_EXPIRED: new AuthError(
+    'Session expired',
+    'SESSION_EXPIRED',
+    'Your session has expired. Please login again.'
+  ),
+  NETWORK_ERROR: new AuthError(
+    'Network error',
+    'NETWORK_ERROR',
+    'Network error. Please check your connection and try again.'
+  ),
+}
+
+// Error handler component
+// components/ui/error-boundary.tsx
+'use client'
+import { Component, ReactNode } from 'react'
+import { Button } from './button'
+
+interface Props {
+  children: ReactNode
+  fallback?: ReactNode
+}
+
+interface State {
+  hasError: boolean
+  error?: Error
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('Error caught by boundary:', error, errorInfo)
+    // Log to error tracking service (e.g., Sentry)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
+          <p className="text-muted-foreground mb-4">
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Reload Page
+          </Button>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+```
+
+### Database Error Handling
+
+```typescript
+// lib/errors/db-errors.ts
+export class DatabaseError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public userMessage: string
+  ) {
+    super(message)
+    this.name = 'DatabaseError'
+  }
+}
+
+export const DB_ERRORS = {
+  CONNECTION_FAILED: new DatabaseError(
+    'Database connection failed',
+    'CONNECTION_FAILED',
+    'Unable to connect to the database. Please try again.'
+  ),
+  QUERY_FAILED: new DatabaseError(
+    'Query failed',
+    'QUERY_FAILED',
+    'An error occurred while fetching data. Please try again.'
+  ),
+  CONSTRAINT_VIOLATION: new DatabaseError(
+    'Constraint violation',
+    'CONSTRAINT_VIOLATION',
+    'Invalid data provided. Please check your input.'
+  ),
+}
+
+// Wrapper for database operations
+// lib/supabase/with-error-handling.ts
+export async function withDbErrorHandling<T>(
+  operation: () => Promise<T>,
+  errorMessage: string = 'Operation failed'
+): Promise<{ data: T | null; error: string | null }> {
+  try {
+    const data = await operation()
+    return { data, error: null }
+  } catch (error) {
+    console.error(`${errorMessage}:`, error)
+    if (error instanceof DatabaseError) {
+      return { data: null, error: error.userMessage }
+    }
+    return { data: null, error: 'An unexpected error occurred' }
+  }
+}
+```
+
+### User-Friendly Error Messages
+
+| Error Type | User Message | Action |
+|------------|-------------|--------|
+| Invalid credentials | Invalid email or password. Please try again. | Show on login form |
+| Weak password | Password must be at least 8 characters with letters, numbers, and symbols. | Show during registration |
+| Email exists | An account with this email already exists. | Link to login page |
+| Session expired | Your session has expired. Please login again. | Redirect to login |
+| Network error | Network error. Please check your connection. | Retry button |
+| Database error | Unable to load data. Please try again. | Retry button |
+| Rate limited | Too many attempts. Please wait a few minutes. | Show countdown timer |
+
+---
+
+## Security Considerations
+
+### Password Policy
+
+**Requirements:**
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character (!@#$%^&*)
+
+**Validation:**
+```typescript
+// lib/auth/password-validation.ts
+export function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters')
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter')
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter')
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number')
+  }
+  if (!/[!@#$%^&*]/.test(password)) {
+    errors.push('Password must contain at least one special character')
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+```
+
+### Rate Limiting
+
+**Endpoints to Rate Limit:**
+- Login: 5 attempts per 15 minutes per IP
+- Register: 3 attempts per hour per IP
+- Password reset: 3 attempts per hour per email
+- API routes: 100 requests per minute per user
+
+**Implementation:**
+```typescript
+// middleware.ts (rate limiting)
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, '15 m'),
+})
+
+export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname === '/login') {
+    const ip = request.ip ?? '127.0.0.1'
+    const { success } = await ratelimit.limit(ip)
+
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Too many attempts. Please try again later.' },
+        { status: 429 }
+      )
+    }
+  }
+  // ... rest of middleware
+}
+```
+
+### Session Configuration
+
+**Settings:**
+- Session timeout: 7 days
+- Refresh token rotation: Enabled
+- Remember me: 30 days
+- Password change requires re-authentication: Yes
+
+### CSRF Protection
+
+**Implementation:**
+- Use Supabase's built-in CSRF protection
+- All state-changing operations require valid session
+- Verify session on every protected route
+
+### XSS Prevention
+
+**Measures:**
+- All user input sanitized before display
+- React's built-in XSS protection
+- Content Security Policy (CSP) headers
+- No `dangerouslySetInnerHTML` without sanitization
+
+### File Upload Validation
+
+**Product Image Uploads:**
+- Allowed types: image/jpeg, image/png, image/webp
+- Max file size: 5MB
+- Image dimensions: Min 800x800, Max 4000x4000
+- Auto-optimization: WebP format, quality 85%
+- Virus scanning: Enabled
+
+**Implementation:**
+```typescript
+// lib/storage/image-validation.ts
+export async function validateImageUpload(file: File): Promise<{ valid: boolean; error?: string }> {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+  const maxSize = 5 * 1024 * 1024 // 5MB
+
+  if (!allowedTypes.includes(file.type)) {
+    return { valid: false, error: 'Only JPEG, PNG, and WebP images are allowed' }
+  }
+
+  if (file.size > maxSize) {
+    return { valid: false, error: 'Image size must be less than 5MB' }
+  }
+
+  // Validate image dimensions
+  const dimensions = await getImageDimensions(file)
+  if (dimensions.width < 800 || dimensions.height < 800) {
+    return { valid: false, error: 'Image must be at least 800x800 pixels' }
+  }
+
+  if (dimensions.width > 4000 || dimensions.height > 4000) {
+    return { valid: false, error: 'Image must be less than 4000x4000 pixels' }
+  }
+
+  return { valid: true }
+}
+```
+
+### OAuth Security
+
+**Configuration:**
+- OAuth callback URL: Verified and whitelisted
+- Profile auto-creation: Enabled on first login
+- Email verification: Required before account activation
+- Existing email handling: Link OAuth to existing account
+
+**OAuth Implementation Details:**
+```typescript
+// lib/auth/oauth-helpers.ts
+export async function handleOAuthSignIn(provider: 'google' | 'github') {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      }
+    }
+  })
+
+  if (error) throw error
+  return data.url
+}
+
+export async function handleOAuthCallback(code: string) {
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+  if (error) throw error
+
+  // Check if profile exists, create if not
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', data.user.id)
+    .single()
+
+  if (!profile) {
+    await supabase.from('profiles').insert({
+      id: data.user.id,
+      email: data.user.email,
+      full_name: data.user.user_metadata.full_name,
+      avatar_url: data.user.user_metadata.avatar_url,
+      role: 'customer',
+    })
+  }
+
+  return data
+}
+```
+
+---
+
+## Admin Initialization
+
+### First Admin Setup
+
+**Option 1: Manual Database Creation (Recommended for Production)**
+
+```sql
+-- Run this SQL in Supabase SQL Editor to create first admin
+-- 1. Create user via Supabase Auth dashboard first, get the UUID
+-- 2. Then run:
+
+INSERT INTO profiles (id, email, role, full_name)
+VALUES (
+  'YOUR_USER_UUID_FROM_AUTH', -- Replace with actual UUID
+  'admin@pawfectlyhandmade.com',
+  'admin',
+  'System Administrator'
+);
+```
+
+**Option 2: Seed Script with Environment Variable Protection (Development)**
+
+```typescript
+// scripts/create-admin.ts
+import { createClient } from '@supabase/supabase-js'
+import * as dotenv from 'dotenv'
+
+dotenv.config()
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // Only works with service role key
+)
+
+async function createAdmin() {
+  const adminEmail = process.env.ADMIN_EMAIL
+  const adminPassword = process.env.ADMIN_PASSWORD
+  const adminName = process.env.ADMIN_NAME || 'Admin'
+
+  if (!adminEmail || !adminPassword) {
+    console.error('ADMIN_EMAIL and ADMIN_PASSWORD must be set')
+    process.exit(1)
+  }
+
+  // Create auth user
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email: adminEmail,
+    password: adminPassword,
+    email_confirm: true,
+  })
+
+  if (authError) {
+    console.error('Error creating auth user:', authError)
+    process.exit(1)
+  }
+
+  // Create profile
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .insert({
+      id: authData.user.id,
+      email: adminEmail,
+      role: 'admin',
+      full_name: adminName,
+    })
+
+  if (profileError) {
+    console.error('Error creating profile:', profileError)
+    process.exit(1)
+  }
+
+  console.log('Admin user created successfully!')
+  console.log('Email:', adminEmail)
+  console.log('Password:', adminPassword)
+  console.log('IMPORTANT: Change this password immediately after first login!')
+}
+
+createAdmin()
+```
+
+**Usage:**
+```bash
+# In .env.local (DO NOT commit to version control)
+ADMIN_EMAIL=admin@pawfectlyhandmade.com
+ADMIN_PASSWORD=SecurePassword123!
+ADMIN_NAME=System Administrator
+
+# Run script
+npm run create-admin
+```
+
+**Security Notes:**
+- Never commit admin credentials to version control
+- Use environment variables for all sensitive data
+- Change admin password immediately after first login
+- Enable two-factor authentication (2FA) for admin accounts in production
+- Consider IP whitelist for admin dashboard access
 
 ---
 
@@ -699,11 +1419,18 @@ export async function middleware(request: NextRequest) {
 
 ### New Packages to Install
 
+**Note:** The project already has `@supabase/ssr` installed. Use that instead of the deprecated `@supabase/auth-helpers-nextjs`.
+
 ```bash
 npm install @supabase/supabase-js@latest
-npm install @supabase/auth-helpers-nextjs@latest
-npm install lucide-react@latest  # icons
+npm install lucide-react@latest  # icons (already installed)
+npm install zod@latest  # form validation
+npm install react-hook-form@latest  # form handling
+npm install @hookform/resolvers@latest  # Zod resolver for react-hook-form
 ```
+
+**DO NOT install:**
+- `@supabase/auth-helpers-nextjs` - This package is deprecated. Use `@supabase/ssr` instead (already installed).
 
 ### Files to Create/Modify
 
