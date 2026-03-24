@@ -24,9 +24,10 @@ export function Navbar() {
   }, [])
 
   const handleSignOut = async () => {
-    await signOut()
     setIsUserMenuOpen(false)
-    window.location.href = '/'
+    await signOut()
+    // Force hard redirect to clear all auth state
+    window.location.href = '/login'
   }
 
   const navLinks = [

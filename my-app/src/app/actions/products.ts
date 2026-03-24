@@ -1,6 +1,6 @@
 'use server'
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { mockProducts } from '@/data/mock-products'
 import { Product, BulkPricingTier, ProductCategory } from '@/types'
 
@@ -63,7 +63,7 @@ export async function getProducts(filters?: {
 
   // Fetch from Supabase
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Fall back to mock if Supabase client couldn't be created
     if (!supabase) {
@@ -128,7 +128,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   }
 
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     // Fall back to mock if Supabase client couldn't be created
     if (!supabase) {
