@@ -10,6 +10,23 @@
 
 ---
 
+## Notes for Implementer
+
+**Critical fixes applied in this revision:**
+- `deleteUser` now uses soft-delete (modifies profile) instead of `supabase.auth.admin.deleteUser()` which requires service role key
+- Auth context redirect logic now properly awaits `fetchProfile()` return value before checking role
+- `useRouter` import added to auth context
+- Task 2 removed (role already exists in Profile type)
+- Task 2 now installs all dependencies (zod, lucide-react, sonner) and shadcn components upfront
+- File structure updated to remove unused files (constants.ts, image-upload.tsx, products/[id]/page.tsx)
+- Added loading.tsx and error.tsx to file structure
+
+**Still needs manual verification:**
+- Check if profiles table has a trigger that auto-creates profiles on signup (if yes, Task 5 can be skipped)
+- Verify role column exists in profiles table before starting
+
+---
+
 ## File Structure
 
 ### New Files to Create
@@ -17,28 +34,26 @@
 ```
 src/
 ├── app/
-│   ├── proxy.ts                          # Server-side route protection (NEW)
+│   ├── proxy.ts                          # Server-side route protection (NEW - at root of app/)
 │   └── admin/
 │       ├── layout.tsx                    # Protected admin layout with sidebar (NEW)
+│       ├── loading.tsx                   # Loading state for admin routes (NEW)
+│       ├── error.tsx                     # Error boundary for admin routes (NEW)
 │       ├── dashboard/
 │       │   └── page.tsx                  # Admin dashboard overview (NEW)
 │       ├── users/
 │       │   └── page.tsx                  # User management page (NEW)
 │       └── products/
-│           ├── page.tsx                  # Product list page (NEW)
-│           └── [id]/page.tsx             # Product edit page (NEW)
+│           └── page.tsx                  # Product list page (NEW)
 ├── components/admin/
 │   ├── admin-sidebar.tsx                 # Navigation sidebar (NEW)
-│   ├── admin-header.tsx                  # Mobile header with hamburger (NEW)
 │   ├── dashboard-stats.tsx               # Stats cards component (NEW)
 │   ├── users-table.tsx                   # User list with actions (NEW)
 │   ├── products-grid.tsx                 # Product grid/list (NEW)
-│   ├── product-form-modal.tsx            # Add/Edit product modal (NEW)
-│   └── image-upload.tsx                  # Image upload component (NEW)
+│   └── product-form-modal.tsx            # Add/Edit product modal (NEW)
 ├── actions/admin.ts                      # Admin Server Actions (NEW)
 ├── lib/
-│   ├── admin-validations.ts              # Zod schemas (NEW)
-│   └── constants.ts                      # Admin constants (NEW)
+│   └── admin-validations.ts              # Zod schemas (NEW)
 └── types/
     └── admin.ts                          # Admin-specific types (NEW)
 ```
@@ -47,10 +62,9 @@ src/
 
 ```
 src/
-├── contexts/auth-context.tsx             # Add role-based redirect, isAdmin flag
-├── app/(auth)/login/page.tsx             # Update to handle role-based redirect
-├── app/(auth)/register/page.tsx          # Set default role to 'customer'
-└── types/auth.ts                         # Add role to Profile type
+├── contexts/auth-context.tsx             # Add isAdmin flag, role-based redirect
+├── app/(auth)/login/page.tsx             # Simplify (auth context handles redirect)
+└── app/layout.tsx                        # Add Toaster for notifications
 ```
 
 ---
@@ -145,29 +159,29 @@ UPDATE profiles SET role = 'admin' WHERE email = 'your-email@example.com';
 
 ---
 
-## Task 2: Update Types
+## Task 2: Install Required Dependencies
 
 **Files:**
-- Modify: `src/types/auth.ts`
+- Modify: `package.json`, `package-lock.json`
 
-- [ ] **Step 1: Add role to Profile type**
+- [ ] **Step 1: Install npm packages**
 
-Open `src/types/auth.ts` and update:
+Run: `npm install zod lucide-react sonner`
 
-```typescript
-export interface Profile {
-  id: string
-  email: string
-  full_name: string | null
-  avatar_url: string | null
-  role: 'customer' | 'admin'  // ADD THIS
-  created_at?: string
-}
+- [ ] **Step 2: Install shadcn/ui components**
+
+Run: `npx shadcn@latest add card table badge dialog input textarea select label`
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add package.json package-lock.json src/components/ui/
+git commit -m "feat: install admin dependencies (zod, sonner, lucide-react, shadcn)"
 ```
 
-- [ ] **Step 2: Create admin types**
+---
 
-Create `src/types/admin.ts`:
+## Task 3: Create Admin Types
 
 ```typescript
 export interface Product {
@@ -214,11 +228,7 @@ git commit -m "feat: add role and admin types"
 **Files:**
 - Create: `src/lib/admin-validations.ts`
 
-- [ ] **Step 1: Install Zod if not installed**
-
-Run: `npm install zod`
-
-- [ ] **Step 2: Create validation schemas**
+- [ ] **Step 1: Create validation schemas**
 
 Create `src/lib/admin-validations.ts`:
 
@@ -245,10 +255,10 @@ export const UserRoleSchema = z.enum(['customer', 'admin'])
 export type UserRole = z.infer<typeof UserRoleSchema>
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
-git add src/lib/admin-validations.ts package.json package-lock.json
+git add src/lib/admin-validations.ts
 git commit -m "feat: add admin validation schemas with Zod"
 ```
 
@@ -259,7 +269,14 @@ git commit -m "feat: add admin validation schemas with Zod"
 **Files:**
 - Modify: `src/contexts/auth-context.tsx`
 
-- [ ] **Step 1: Update AuthContextType interface**
+- [ ] **Step 1: Add useRouter import**
+
+At the top of the file, add:
+```typescript
+import { useRouter } from 'next/navigation'
+```
+
+- [ ] **Step 2: Update AuthContextType interface**
 
 ```typescript
 interface AuthContextType {
@@ -274,16 +291,36 @@ interface AuthContextType {
 }
 ```
 
-- [ ] **Step 2: Add isAdmin derived state and redirect logic**
+- [ ] **Step 3: Add router and isAdmin in AuthProvider**
 
-In AuthProvider, after the state declarations:
-
+In AuthProvider component, after state declarations:
 ```typescript
+const router = useRouter()
 const isAdmin = profile?.role === 'admin'
-const router = useRouter()  // ADD THIS if not present
 ```
 
-- [ ] **Step 3: Update onAuthStateChange to handle role-based redirect**
+- [ ] **Step 4: Update fetchProfile to return profile data**
+
+Modify the fetchProfile function to return the profile:
+```typescript
+const fetchProfile = async (userId: string) => {
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (data && !error) {
+    setProfile(data)
+  }
+  setLoading(false)
+  return data  // ADD THIS
+}
+```
+
+- [ ] **Step 5: Update onAuthStateChange to handle role-based redirect**
 
 Find the `supabase.auth.onAuthStateChange` callback and update:
 
@@ -294,16 +331,16 @@ const {
   setUser(session?.user ?? null)
 
   if (session?.user) {
-    await fetchProfile(session.user.id)
+    const profile = await fetchProfile(session.user.id)  // GET RETURNED PROFILE
+
+    // Auto-redirect based on role after sign in
+    if (event === 'SIGNED_IN' && profile?.role === 'admin') {
+      router.push('/admin/dashboard')
+      router.refresh()
+    }
   } else {
     setProfile(null)
     setLoading(false)
-  }
-
-  // ADD: Auto-redirect based on role after sign in
-  if (event === 'SIGNED_IN' && profile?.role === 'admin') {
-    router.push('/admin/dashboard')
-    router.refresh()
   }
 })
 ```
@@ -756,8 +793,16 @@ export async function deleteUser(userId: string): Promise<{ success: boolean; er
     return { error: 'Unauthorized', success: false }
   }
 
-  // Delete from auth (this cascades to profiles)
-  const { error } = await supabase.auth.admin.deleteUser(userId)
+  // Soft-delete: mark user email as deleted and revoke sessions
+  // Note: For full deletion, you would need to use Supabase Management API with service role key
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      email: `deleted_${userId}@deleted.local`,
+      full_name: 'Deleted User',
+      role: 'customer',
+    })
+    .eq('id', userId)
 
   if (error) {
     console.error('User deletion failed:', error)
