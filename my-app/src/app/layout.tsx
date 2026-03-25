@@ -5,6 +5,7 @@ import { CartProviderWrapper } from "@/components/cart/cart-provider-wrapper";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { AuthProvider } from "@/contexts/auth-context";
+import { Toaster } from "sonner";
 
 // Custom fonts for Pawfectly Handmade brand
 const patrickHand = Patrick_Hand({
@@ -46,6 +47,7 @@ export default function RootLayout({
             <Footer />
           </CartProviderWrapper>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );

@@ -38,7 +38,9 @@ export default function RegisterPage() {
       setError(error)
       setIsLoading(false)
     } else {
-      router.push('/account')
+      // Success! Redirect to login page
+      // Note: You may need to confirm your email first depending on Supabase settings
+      router.push('/login?registered=1')
       router.refresh()
     }
   }

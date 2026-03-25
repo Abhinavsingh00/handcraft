@@ -3,6 +3,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { ShoppingBag, Menu, X, PawPrint, User, LogOut } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
@@ -10,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 
 export function Navbar() {
+  const router = useRouter()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
@@ -26,8 +28,7 @@ export function Navbar() {
   const handleSignOut = async () => {
     setIsUserMenuOpen(false)
     await signOut()
-    // Force hard redirect to clear all auth state
-    window.location.href = '/login'
+    router.push('/login')
   }
 
   const navLinks = [
@@ -115,12 +116,12 @@ export function Navbar() {
                       </Link>
                       {profile?.role === 'admin' && (
                         <Link
-                          href="/admin"
+                          href="/admin/dashboard"
                           className="flex items-center gap-2 px-4 py-2 hover:bg-muted transition-colors"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <User className="w-4 h-4" />
-                          <span>Admin Dashboard</span>
+                          <span>Dashboard</span>
                         </Link>
                       )}
                       <hr className="my-2" />
@@ -137,16 +138,16 @@ export function Navbar() {
               ) : (
                 <div className="flex items-center gap-2">
                   <Link
-                    href="/login"
+                    href="/customer-login"
                     className="px-4 py-2 text-sm font-medium hover:text-primary transition-colors"
                   >
-                    Sign In
+                    My Account
                   </Link>
                   <Link
-                    href="/register"
+                    href="/login"
                     className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                   >
-                    Sign Up
+                    Login
                   </Link>
                 </div>
               )}
@@ -195,11 +196,11 @@ export function Navbar() {
                 </Link>
                 {profile?.role === 'admin' && (
                   <Link
-                    href="/admin"
+                    href="/admin/dashboard"
                     className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    Admin Dashboard
+                    Dashboard
                   </Link>
                 )}
                 <button
@@ -213,22 +214,13 @@ export function Navbar() {
                 </button>
               </>
             ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/register"
-                  className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Sign Up
-                </Link>
-              </>
+              <Link
+                href="/login"
+                className="block py-2 px-2 hover:bg-muted/50 rounded transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Login
+              </Link>
             )}
           </div>
         )}

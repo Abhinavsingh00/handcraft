@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/auth'
@@ -9,6 +10,7 @@ interface AuthContextType {
   user: User | null
   profile: Profile | null
   loading: boolean
+  isAdmin: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -18,11 +20,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
   const supabase = createClient()
+  const isAdmin = profile?.role === 'admin'
 
   useEffect(() => {
     if (!supabase) {
@@ -45,8 +49,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null)
+
       if (session?.user) {
-        await fetchProfile(session.user.id)
+        const profile = await fetchProfile(session.user.id)
+
+        // Auto-redirect based on role after sign in
+        if (event === 'SIGNED_IN' && profile?.role === 'admin') {
+          router.push('/admin/dashboard')
+          router.refresh()
+        }
       } else {
         setProfile(null)
         setLoading(false)
@@ -57,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const fetchProfile = async (userId: string) => {
-    if (!supabase) return
+    if (!supabase) return null
 
     const { data, error } = await supabase
       .from('profiles')
@@ -69,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(data)
     }
     setLoading(false)
+    return data
   }
 
   const signIn = async (email: string, password: string) => {
@@ -103,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message }
     }
 
+    // Note: Profile is auto-created by database trigger
     return { error: null }
   }
 
@@ -120,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     if (!supabase) return
+    if (typeof window === 'undefined') return
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -133,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.url) {
-      window.location.href = data.url
+      router.push(data.url)
     }
   }
 
@@ -143,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         loading,
+        isAdmin,
         signIn,
         signUp,
         signOut,

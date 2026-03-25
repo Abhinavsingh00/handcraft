@@ -1,18 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { signIn, signInWithGoogle, loading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('registered') === '1') {
+      setSuccessMessage('Account created successfully! Please sign in.')
+      // Remove the parameter from URL
+      router.replace('/login')
+    }
+  }, [searchParams, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,10 +34,8 @@ export default function LoginPage() {
     if (error) {
       setError(error)
       setIsLoading(false)
-    } else {
-      router.push('/account')
-      router.refresh()
     }
+    // Auth context will handle redirect based on role
   }
 
   const handleGoogleSignIn = async () => {
@@ -40,6 +48,12 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold font-display">Welcome Back</h1>
         <p className="text-muted-foreground mt-2">Sign in to your account</p>
       </div>
+
+      {successMessage && (
+        <div className="bg-green-50 text-green-800 p-3 rounded-md mb-4 text-sm border border-green-200">
+          {successMessage}
+        </div>
+      )}
 
       {error && (
         <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
